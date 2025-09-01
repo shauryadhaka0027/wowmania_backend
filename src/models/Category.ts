@@ -266,3 +266,4 @@ categorySchema.statics.buildTree = function(categories: ICategory[]): any[] {
 };
 
 export const Category = mongoose.model<ICategory>('Category', categorySchema);
+

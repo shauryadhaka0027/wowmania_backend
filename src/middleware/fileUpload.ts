@@ -41,3 +41,4 @@ export const uploadMultiple = (fieldName: string, maxCount: number = 5) => uploa
 
 // Multiple fields upload
 export const uploadFields = (fields: multer.Field[]) => upload.fields(fields);
+

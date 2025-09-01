@@ -4,3 +4,4 @@ declare module 'xss-clean' {
   function xss(): RequestHandler;
   export = xss;
 }
+

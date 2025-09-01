@@ -257,3 +257,4 @@ notificationSchema.statics.cleanupExpired = async function(): Promise<void> {
 };
 
 export const Notification = mongoose.model<INotification>('Notification', notificationSchema);
+

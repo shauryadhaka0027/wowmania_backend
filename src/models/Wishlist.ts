@@ -167,3 +167,4 @@ wishlistSchema.statics.findByShareToken = async function(token: string): Promise
 };
 
 export const Wishlist = mongoose.model<IWishlist>('Wishlist', wishlistSchema);
+
