@@ -17,7 +17,7 @@ export const getNotifications = async (req: Request, res: Response) => {
     priority: priority as string
   };
 
-  const notifications = await Notification.findByUser(userId, options);
+  const notifications = await (Notification as any).findByUser(userId, options);
 
   res.json({
     success: true,
@@ -29,7 +29,7 @@ export const getNotifications = async (req: Request, res: Response) => {
 export const getUnreadCount = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  const count = await Notification.getUnreadCount(userId);
+  const count = await (Notification as any).getUnreadCount(userId);
 
   res.json({
     success: true,
@@ -129,7 +129,7 @@ export const unarchiveNotification = async (req: Request, res: Response) => {
 export const markAllAsRead = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  await Notification.markAllAsRead(userId);
+  await (Notification as any).markAllAsRead(userId);
 
   logger.info('All notifications marked as read', { userId });
 

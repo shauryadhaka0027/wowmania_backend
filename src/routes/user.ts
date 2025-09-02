@@ -108,8 +108,9 @@ const preferencesValidation = [
 router.get('/',
   requireAuth,
   requireRole('admin', 'super_admin'),
-  commonValidations.pagination,
-  validateRequest,
+
+
+  validateRequest(commonValidations.pagination),
   asyncHandler(userController.getAllUsers)
 );
 
@@ -213,9 +214,7 @@ router.put('/preferences',
 router.get('/search',
   requireAuth,
   requireRole('admin', 'super_admin'),
-  commonValidations.searchQuery,
-  commonValidations.pagination,
-  validateRequest,
+  validateRequest([...commonValidations.searchQuery, ...commonValidations.pagination]),
   asyncHandler(userController.searchUsers)
 );
 

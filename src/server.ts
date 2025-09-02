@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
-import xss from 'xss-clean';
+
 import morgan from 'morgan';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -53,7 +53,7 @@ connectRedis();
 // Security middleware
 app.use(helmet());
 app.use(mongoSanitize());
-app.use(xss());
+
 
 // Rate limiting
 const limiter = rateLimit({

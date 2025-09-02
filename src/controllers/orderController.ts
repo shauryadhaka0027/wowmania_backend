@@ -81,7 +81,7 @@ export const createOrder = async (req: Request, res: Response) => {
   const { shippingAddress, billingAddress, paymentMethod, notes } = req.body;
 
   // Get user's cart
-  const cart = await Cart.findByUserId(userId);
+  const cart = await Cart.findOne({ userId }) as any;
   if (!cart || cart.isEmpty) {
     throw createValidationError('Cart is empty');
   }
@@ -99,7 +99,7 @@ export const createOrder = async (req: Request, res: Response) => {
   // Create order from cart
   const orderData = {
     userId,
-    items: cart.items.map(item => ({
+    items: cart.items.map((item: any) => ({
       productId: item.productId,
       variantId: item.variantId,
       quantity: item.quantity,
@@ -127,7 +127,7 @@ export const createOrder = async (req: Request, res: Response) => {
   for (const item of order.items) {
     const product = await Product.findById(item.productId);
     if (product && item.variantId) {
-      const variant = product.variants.find(v => v._id.toString() === item.variantId.toString());
+      const variant = product.variants.find((v: any) => v._id && v._id.toString() === (item.variantId as string).toString());
       if (variant) {
         variant.inventory.quantity -= item.quantity;
         await product.save();
@@ -137,7 +137,7 @@ export const createOrder = async (req: Request, res: Response) => {
 
   logger.info('Order created', { orderId: order._id, userId });
 
-  res.status(201).json({
+  return res.status(201).json({
     success: true,
     data: { order },
     message: 'Order created successfully'
@@ -184,7 +184,7 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     throw createNotFoundError('Order not found');
   }
 
-  await order.updateStatus(status, notes);
+  await (order as any).updateStatus(status, notes);
 
   logger.info('Order status updated', { orderId: id, status, updatedBy: (req as any).user.id });
 
@@ -204,7 +204,7 @@ export const updatePaymentStatus = async (req: Request, res: Response) => {
     throw createNotFoundError('Order not found');
   }
 
-  await order.updatePaymentStatus(paymentStatus, transactionId);
+  await (order as any).updatePaymentStatus(paymentStatus);
 
   logger.info('Payment status updated', { orderId: id, paymentStatus, updatedBy: (req as any).user.id });
 
@@ -224,7 +224,7 @@ export const addTracking = async (req: Request, res: Response) => {
     throw createNotFoundError('Order not found');
   }
 
-  await order.addTracking(trackingNumber, carrier, trackingUrl);
+  await (order as any).addTracking(trackingNumber);
 
   logger.info('Tracking added', { orderId: id, trackingNumber, addedBy: (req as any).user.id });
 
@@ -252,15 +252,15 @@ export const cancelOrder = async (req: Request, res: Response) => {
   }
 
   // Check if order can be cancelled
-  if (!order.isRefundable) {
+  if (!(order as any).isRefundable) {
     throw createValidationError('Order cannot be cancelled at this stage');
   }
 
   // Update order status
-  order.status = 'cancelled';
-  order.cancelledAt = new Date();
-  order.cancellationReason = reason;
-  order.cancelledBy = userId;
+  (order as any).status = 'cancelled';
+  (order as any).cancelledAt = new Date();
+  (order as any).cancellationReason = reason;
+  (order as any).cancelledBy = userId;
 
   await order.save();
 
@@ -268,7 +268,7 @@ export const cancelOrder = async (req: Request, res: Response) => {
   for (const item of order.items) {
     const product = await Product.findById(item.productId);
     if (product && item.variantId) {
-      const variant = product.variants.find(v => v._id.toString() === item.variantId.toString());
+      const variant = product.variants.find((v: any) => v._id && v._id.toString() === (item.variantId as string).toString());
       if (variant) {
         variant.inventory.quantity += item.quantity;
         await product.save();
@@ -294,11 +294,11 @@ export const processRefund = async (req: Request, res: Response) => {
     throw createNotFoundError('Order not found');
   }
 
-  if (order.paymentStatus !== 'paid') {
-    throw createValidationError('Order payment status must be paid to process refund');
+  if (order.paymentStatus !== 'completed') {
+    throw createValidationError('Order payment status must be completed to process refund');
   }
 
-  const refund = await order.processRefund(amount, reason, refundMethod);
+  const refund = await (order as any).processRefund(amount, reason);
 
   logger.info('Refund processed', { orderId: id, refundId: refund._id, processedBy: (req as any).user.id });
 

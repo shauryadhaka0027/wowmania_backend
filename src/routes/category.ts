@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import { asyncHandler } from '../middleware/errorHandler';
 import { requireAuth, requireRole } from '../middleware/auth';
-import { validate, commonValidations } from '../middleware/validation';
+import { validate, commonValidations, validateRequest } from '../middleware/validation';
 import { uploadSingle } from '../middleware/fileUpload';
 import { cache } from '../middleware/cache';
 import * as categoryController from '../controllers/categoryController';
@@ -29,7 +29,15 @@ const updateCategoryValidation = [
 ];
 
 // GET /api/v1/categories - Get all categories
-router.get('/', commonValidations, validate, cache, asyncHandler(categoryController.getAllCategories));
+router.get('/',
+  validateRequest([
+    ...commonValidations.pagination,
+    ...commonValidations.searchQuery,
+    ...commonValidations.sort
+  ]),
+  cache,
+  asyncHandler(categoryController.getAllCategories)
+);
 
 // GET /api/v1/categories/featured - Get featured categories
 router.get('/featured', cache, asyncHandler(categoryController.getFeaturedCategories));

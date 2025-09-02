@@ -15,13 +15,15 @@ export const authenticate = async (
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw createUnauthorizedError('Access token required', 'TOKEN_MISSING');
+      throw createUnauthorizedError('Access token required');
+
+      
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
     if (!token) {
-      throw createUnauthorizedError('Access token required', 'TOKEN_MISSING');
+      throw createUnauthorizedError('Access token required');
     }
 
     // Verify JWT token
@@ -31,16 +33,16 @@ export const authenticate = async (
     const user = await User.findById(decoded.userId).select('-password');
     
     if (!user) {
-      throw createUnauthorizedError('User not found', 'USER_NOT_FOUND');
+      throw createUnauthorizedError('User not found');
     }
 
     if (!user.isActive) {
-      throw createForbiddenError('User account is deactivated', 'ACCOUNT_DEACTIVATED');
+      throw createForbiddenError('User account is deactivated');
     }
 
     // Check if user is locked
-    if (user.isLocked) {
-      throw createForbiddenError('User account is locked', 'ACCOUNT_LOCKED');
+    if ((user as any).isLocked) {
+      throw createForbiddenError('User account is locked');
     }
 
     // Attach user to request
@@ -63,7 +65,7 @@ export const authenticate = async (
         ip: req.ip,
         userAgent: req.get('User-Agent')
       });
-      return next(createUnauthorizedError('Invalid token', 'INVALID_TOKEN'));
+      return next(createUnauthorizedError('Invalid token'));
     }
     
     if (error instanceof jwt.TokenExpiredError) {
@@ -71,7 +73,7 @@ export const authenticate = async (
         ip: req.ip,
         userAgent: req.get('User-Agent')
       });
-      return next(createUnauthorizedError('Token expired', 'TOKEN_EXPIRED'));
+      return next(createUnauthorizedError('Token expired'));
     }
 
     next(error);
@@ -81,7 +83,7 @@ export const authenticate = async (
 export const authorize = (...roles: string[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return next(createUnauthorizedError('Authentication required', 'AUTH_REQUIRED'));
+      return next(createUnauthorizedError('Authentication required'));
     }
 
     if (!roles.includes(req.user.role)) {
@@ -95,8 +97,7 @@ export const authorize = (...roles: string[]) => {
       });
       
       return next(createForbiddenError(
-        'Insufficient permissions to access this resource',
-        'INSUFFICIENT_PERMISSIONS'
+        'Insufficient permissions to access this resource'
       ));
     }
 

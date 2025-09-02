@@ -1,3 +1,4 @@
+
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { Order } from '../models/Order';
@@ -18,11 +19,11 @@ export const createPaymentIntent = async (req: Request, res: Response) => {
     throw createNotFoundError('Order not found');
   }
 
-  if (order.paymentStatus === 'paid') {
+  if (order.paymentStatus === 'completed') {
     throw createValidationError('Order is already paid');
   }
 
-  if (order.status === 'cancelled') {
+  if (order.orderStatus === 'cancelled') {
     throw createValidationError('Cannot process payment for cancelled order');
   }
 
@@ -87,7 +88,7 @@ export const confirmPayment = async (req: Request, res: Response) => {
       }
 
       // Update order payment status
-      order.paymentStatus = 'paid';
+      order.paymentStatus = 'completed';
       order.paidAt = new Date();
       order.transactionId = paymentIntent.latest_charge as string;
       await order.save();
@@ -126,8 +127,9 @@ export const handleWebhook = async (req: Request, res: Response) => {
       config.stripe.webhookSecret
     );
   } catch (err) {
-    logger.error('Webhook signature verification failed', { error: err });
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('Webhook signature verification failed', { error: message });
+    return res.status(400).send(`Webhook Error: ${message}`);
   }
 
   try {
@@ -148,10 +150,11 @@ export const handleWebhook = async (req: Request, res: Response) => {
         logger.info(`Unhandled event type: ${event.type}`);
     }
 
-    res.json({ received: true });
+    return res.json({ received: true });
   } catch (error) {
-    logger.error('Error processing webhook', { error, eventType: event.type });
-    res.status(500).json({ error: 'Webhook processing failed' });
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('Error processing webhook', { error: message, eventType: event.type });
+    return res.status(500).json({ error: 'Webhook processing failed' });
   }
 };
 
@@ -162,7 +165,7 @@ const handlePaymentSucceeded = async (paymentIntent: Stripe.PaymentIntent) => {
     return;
   }
 
-  order.paymentStatus = 'paid';
+  order.paymentStatus = 'completed';
   order.paidAt = new Date();
   order.transactionId = paymentIntent.latest_charge as string;
   await order.save();
@@ -181,7 +184,7 @@ const handlePaymentFailed = async (paymentIntent: Stripe.PaymentIntent) => {
   }
 
   order.paymentStatus = 'failed';
-  order.paymentFailureReason = paymentIntent.last_payment_error?.message;
+  order.paymentFailureReason = paymentIntent.last_payment_error?.message ?? 'Unknown payment failure';
   await order.save();
 
   logger.info('Payment failed via webhook', { 
@@ -207,7 +210,10 @@ const handleChargeRefunded = async (charge: Stripe.Charge) => {
     stripeRefundId: charge.refunds?.data[0]?.id
   };
 
-  order.refunds.push(refund);
+      if (!order.refunds) {
+      order.refunds = [];
+    }
+    order.refunds.push(refund);
   order.paymentStatus = 'refunded';
   await order.save();
 
@@ -228,7 +234,7 @@ export const processRefund = async (req: Request, res: Response) => {
     throw createNotFoundError('Order not found');
   }
 
-  if (order.paymentStatus !== 'paid') {
+  if (order.paymentStatus !== 'completed') {
     throw createValidationError('Order must be paid to process refund');
   }
 
@@ -258,6 +264,9 @@ export const processRefund = async (req: Request, res: Response) => {
       stripeRefundId: refund.id
     };
 
+    if (!order.refunds) {
+      order.refunds = [];
+    }
     order.refunds.push(refundRecord);
     order.paymentStatus = 'refunded';
     await order.save();

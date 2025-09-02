@@ -118,7 +118,7 @@ categorySchema.index({ sortOrder: 1 });
 
 // Virtuals
 categorySchema.virtual('fullPath').get(function(this: ICategory) {
-  return this.ancestors.map(ancestor => ancestor.toString()).concat(this._id.toString()).join('/');
+  return (this as any).ancestors.map((ancestor: any) => ancestor.toString()).concat((this as any)._id.toString()).join('/');
 });
 
 categorySchema.virtual('childrenCount', {
@@ -159,18 +159,18 @@ categorySchema.pre('save', async function(next) {
   next();
 });
 
-// Pre-remove middleware
-categorySchema.pre('remove', async function(next) {
+// Pre-delete middleware (using deleteOne instead of remove)
+categorySchema.pre('deleteOne', { document: true, query: false }, async function(this: ICategory, next) {
   // Move children to parent or make them root categories
-  const children = await this.model('Category').find({ parent: this._id });
+  const children = await this.model('Category').find({ parent: (this as any)._id });
   for (const child of children) {
-    child.parent = this.parent;
+    (child as any).parent = (this as any).parent;
     await child.save();
   }
   
   // Remove category from products (set to null or default category)
   await this.model('Product').updateMany(
-    { category: this._id },
+    { category: (this as any)._id },
     { category: null }
   );
   
@@ -179,61 +179,61 @@ categorySchema.pre('remove', async function(next) {
 
 // Instance methods
 categorySchema.methods.getChildren = async function(this: ICategory): Promise<ICategory[]> {
-  return await this.model('Category').find({ parent: this._id, isActive: true }).sort({ sortOrder: 1, name: 1 });
+  return await this.model('Category').find({ parent: (this as any)._id, isActive: true }).sort({ sortOrder: 1, name: 1 }) as any;
 };
 
 categorySchema.methods.getAncestors = async function(this: ICategory): Promise<ICategory[]> {
-  if (this.ancestors.length === 0) return [];
-  return await this.model('Category').find({ _id: { $in: this.ancestors } }).sort({ level: 1 });
+  if ((this as any).ancestors.length === 0) return [];
+  return await this.model('Category').find({ _id: { $in: (this as any).ancestors } }).sort({ level: 1 }) as any;
 };
 
 categorySchema.methods.getDescendants = async function(this: ICategory): Promise<ICategory[]> {
-  return await this.model('Category').find({ ancestors: this._id, isActive: true }).sort({ sortOrder: 1, name: 1 });
+  return await this.model('Category').find({ ancestors: (this as any)._id, isActive: true }).sort({ sortOrder: 1, name: 1 }) as any;
 };
 
 categorySchema.methods.moveTo = async function(this: ICategory, newParent?: mongoose.Types.ObjectId): Promise<void> {
-  this.parent = newParent || null;
+  (this as any).parent = newParent || null;
   await this.updateAncestors();
   await this.save();
 };
 
 categorySchema.methods.updateAncestors = async function(this: ICategory): Promise<void> {
-  if (!this.parent) {
-    this.ancestors = [];
-    this.level = 0;
+  if (!(this as any).parent) {
+    (this as any).ancestors = [];
+    (this as any).level = 0;
   } else {
-    const parent = await this.model('Category').findById(this.parent);
+    const parent = await this.model('Category').findById((this as any).parent);
     if (!parent) {
       throw new Error('Parent category not found');
     }
     
-    this.ancestors = [...parent.ancestors, parent._id];
-    this.level = parent.level + 1;
+    (this as any).ancestors = [...(parent as any).ancestors, (parent as any)._id];
+    (this as any).level = (parent as any).level + 1;
   }
 };
 
 // Static methods
 categorySchema.statics.findBySlug = async function(slug: string): Promise<ICategory | null> {
-  return await this.findOne({ slug, isActive: true });
+  return await this.findOne({ slug, isActive: true }) as any;
 };
 
 categorySchema.statics.findActive = async function(): Promise<ICategory[]> {
-  return await this.find({ isActive: true }).sort({ sortOrder: 1, name: 1 });
+  return await this.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }) as any;
 };
 
 categorySchema.statics.findFeatured = async function(): Promise<ICategory[]> {
-  return await this.find({ isActive: true, isFeatured: true }).sort({ sortOrder: 1, name: 1 });
+  return await this.find({ isActive: true, isFeatured: true }).sort({ sortOrder: 1, name: 1 }) as any;
 };
 
 categorySchema.statics.findRootCategories = async function(): Promise<ICategory[]> {
-  return await this.find({ parent: null, isActive: true }).sort({ sortOrder: 1, name: 1 });
+  return await this.find({ parent: null, isActive: true }).sort({ sortOrder: 1, name: 1 }) as any;
 };
 
 categorySchema.statics.findWithChildren = async function(): Promise<ICategory[]> {
   return await this.find({ isActive: true })
     .populate('childrenCount')
     .populate('productsCount')
-    .sort({ sortOrder: 1, name: 1 });
+    .sort({ sortOrder: 1, name: 1 }) as any;
 };
 
 categorySchema.statics.buildTree = function(categories: ICategory[]): any[] {
@@ -242,7 +242,7 @@ categorySchema.statics.buildTree = function(categories: ICategory[]): any[] {
   
   // Create a map of all categories
   categories.forEach(category => {
-    categoryMap.set(category._id.toString(), {
+    categoryMap.set((category as any)._id.toString(), {
       ...category.toObject(),
       children: []
     });
@@ -250,10 +250,10 @@ categorySchema.statics.buildTree = function(categories: ICategory[]): any[] {
   
   // Build the tree structure
   categories.forEach(category => {
-    const categoryNode = categoryMap.get(category._id.toString());
+    const categoryNode = categoryMap.get((category as any)._id.toString());
     
-    if (category.parent) {
-      const parent = categoryMap.get(category.parent.toString());
+    if ((category as any).parent) {
+      const parent = categoryMap.get((category as any).parent.toString());
       if (parent) {
         parent.children.push(categoryNode);
       }

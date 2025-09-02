@@ -158,7 +158,7 @@ reviewSchema.methods.report = async function(this: IReview, reason: string, repo
 reviewSchema.methods.approve = async function(this: IReview): Promise<void> {
   this.isApproved = true;
   this.isReported = false;
-  this.reportReason = undefined;
+  delete (this as any).reportReason;
   this.reportedBy = [];
   await this.save();
 };

@@ -332,6 +332,10 @@ const productSchema = new Schema<IProduct>({
   seo: {
     type: seoInfoSchema,
     required: true
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -403,7 +407,10 @@ productSchema.pre('save', function(next) {
     if (primaryImages.length > 1) {
       // If multiple primary images, keep only the first one
       for (let i = 1; i < primaryImages.length; i++) {
-        primaryImages[i].isPrimary = false;
+        const img = primaryImages[i];
+        if (img) {
+          img.isPrimary = false;
+        }
       }
     }
   }
@@ -519,7 +526,7 @@ productSchema.methods.updateVariant = function(variantId: string, updates: Parti
 
 // Method to remove variant
 productSchema.methods.removeVariant = function(variantId: string) {
-  this.variants = this.variants.filter(variant => variant._id.toString() !== variantId);
+  this.variants = this.variants.filter((variant: any) => variant._id.toString() !== variantId);
   return this.save();
 };
 
@@ -527,7 +534,7 @@ productSchema.methods.removeVariant = function(variantId: string) {
 productSchema.methods.addImage = function(image: IProductImage) {
   if (image.isPrimary) {
     // Remove primary from other images
-    this.images.forEach(img => img.isPrimary = false);
+    this.images.forEach((img: any) => img.isPrimary = false);
   }
   this.images.push(image);
   return this.save();
@@ -542,7 +549,7 @@ productSchema.methods.updateImage = function(imageId: string, updates: Partial<I
   
   if (updates.isPrimary) {
     // Remove primary from other images
-    this.images.forEach(img => img.isPrimary = false);
+    this.images.forEach((img: any) => img.isPrimary = false);
   }
   
   Object.assign(image, updates);
@@ -551,13 +558,13 @@ productSchema.methods.updateImage = function(imageId: string, updates: Partial<I
 
 // Method to remove image
 productSchema.methods.removeImage = function(imageId: string) {
-  this.images = this.images.filter(img => img._id.toString() !== imageId);
+  this.images = this.images.filter((img: any) => img._id.toString() !== imageId);
   return this.save();
 };
 
 // Method to set primary image
 productSchema.methods.setPrimaryImage = function(imageId: string) {
-  this.images.forEach(img => img.isPrimary = img._id.toString() === imageId);
+  this.images.forEach((img: any) => img.isPrimary = img._id.toString() === imageId);
   return this.save();
 };
 

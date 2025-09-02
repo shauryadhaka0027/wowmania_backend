@@ -24,11 +24,16 @@ export interface IUser extends Document {
   lastLogin?: Date;
   loginAttempts: number;
   lockUntil?: Date;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
   generateAuthToken(): string;
   generateRefreshToken(): string;
+  addAddress(address: IAddress): Promise<void>;
+  updateAddress(addressId: string, updates: Partial<IAddress>): Promise<void>;
+  removeAddress(addressId: string): Promise<void>;
+  setDefaultAddress(addressId: string): Promise<void>;
 }
 
 export interface IAddress {
@@ -112,8 +117,17 @@ export interface IProduct extends Document {
   discountPercentage?: number;
   inventory: IInventoryInfo;
   seo: ISeoInfo;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+  addVariant(variant: IProductVariant): Promise<void>;
+  updateVariant(variantId: string, updates: Partial<IProductVariant>): Promise<void>;
+  removeVariant(variantId: string): Promise<void>;
+  addImage(image: IProductImage): Promise<void>;
+  updateImage(imageId: string, updates: Partial<IProductImage>): Promise<void>;
+  removeImage(imageId: string): Promise<void>;
+  setPrimaryImage(imageId: string): Promise<void>;
+  updateRatings(newRating: number): Promise<void>;
 }
 
 export interface IProductVariant {
@@ -248,6 +262,17 @@ export interface IOrder extends Document {
   refundReason?: string;
   refundAmount?: number;
   refundDate?: Date;
+  // Payment related properties
+  paymentIntentId?: string;
+  transactionId?: string;
+  paidAt?: Date;
+  paymentFailureReason?: string;
+  // Refund related properties
+  refunds?: any[];
+  // Status tracking
+  cancelledAt?: Date;
+  cancellationReason?: string;
+  cancelledBy?: string;
   createdAt: Date;
   updatedAt: Date;
 }

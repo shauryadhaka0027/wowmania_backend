@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import { asyncHandler } from '../middleware/errorHandler';
 import { requireAuth } from '../middleware/auth';
-import { validate, commonValidations } from '../middleware/validation';
+import { validate, commonValidations, validateRequest } from '../middleware/validation';
 import * as wishlistController from '../controllers/wishlistController';
 
 const router = Router();
@@ -15,7 +15,16 @@ const addToWishlistValidation = [
 ];
 
 // GET /api/v1/wishlist - Get user's wishlist
-router.get('/', commonValidations, validate, requireAuth, asyncHandler(wishlistController.getWishlist));
+router.get('/',
+  validateRequest([
+    ...commonValidations.pagination,
+    ...commonValidations.searchQuery,
+    ...commonValidations.sort
+  ]),
+  validate,
+  requireAuth,
+  asyncHandler(wishlistController.getWishlist)
+);
 
 // POST /api/v1/wishlist/add - Add item to wishlist
 router.post('/add', requireAuth, addToWishlistValidation, validate, asyncHandler(wishlistController.addToWishlist));

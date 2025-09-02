@@ -3,12 +3,12 @@ import { ICart, ICartItem } from '../types';
 
 const cartItemSchema = new Schema<ICartItem>({
   productId: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId as any,
     ref: 'Product',
     required: true
   },
   variantId: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId as any,
     ref: 'Product.variants'
   },
   quantity: {
@@ -35,7 +35,7 @@ const cartItemSchema = new Schema<ICartItem>({
 
 const cartSchema = new Schema<ICart>({
   userId: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId as any,
     ref: 'User',
     required: true,
     unique: true
@@ -101,25 +101,25 @@ const cartSchema = new Schema<ICart>({
 // Virtual for cart summary
 cartSchema.virtual('cartSummary').get(function() {
   return {
-    totalItems: this.items.length,
-    totalQuantity: this.items.reduce((sum, item) => sum + item.quantity, 0),
-    subtotal: this.subtotal,
-    tax: this.tax,
-    shipping: this.shipping,
-    discount: this.discount,
-    total: this.total,
-    currency: this.currency
+    totalItems: (this as any).items.length,
+    totalQuantity: (this as any).items.reduce((sum: any, item: any) => sum + item.quantity, 0),
+    subtotal: (this as any).subtotal,
+    tax: (this as any).tax,
+    shipping: (this as any).shipping,
+    discount: (this as any).discount,
+    total: (this as any).total,
+    currency: (this as any).currency
   };
 });
 
 // Virtual for is empty
 cartSchema.virtual('isEmpty').get(function() {
-  return this.items.length === 0;
+  return (this as any).items.length === 0;
 });
 
 // Virtual for item count
 cartSchema.virtual('itemCount').get(function() {
-  return this.items.reduce((sum, item) => sum + item.quantity, 0);
+  return (this as any).items.reduce((sum: any, item: any) => sum + item.quantity, 0);
 });
 
 // Indexes
@@ -131,14 +131,14 @@ cartSchema.index({ 'items.productId': 1 });
 cartSchema.pre('save', function(next) {
   if (this.isModified('items') || this.isModified('subtotal') || this.isModified('tax') || this.isModified('shipping') || this.isModified('discount') || this.isModified('couponDiscount')) {
     // Calculate subtotal from items
-    this.subtotal = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
+    (this as any).subtotal = (this as any).items.reduce((sum: any, item: any) => sum + item.totalPrice, 0);
     
     // Calculate total
-    this.total = this.subtotal + this.tax + this.shipping - this.discount - this.couponDiscount;
+    (this as any).total = (this as any).subtotal + (this as any).tax + (this as any).shipping - (this as any).discount - (this as any).couponDiscount;
     
     // Ensure total is not negative
-    if (this.total < 0) {
-      this.total = 0;
+    if ((this as any).total < 0) {
+      (this as any).total = 0;
     }
   }
   next();
@@ -146,8 +146,8 @@ cartSchema.pre('save', function(next) {
 
 // Pre-save middleware to update item total prices
 cartSchema.pre('save', function(next) {
-  if (this.items && this.items.length > 0) {
-    this.items.forEach(item => {
+  if ((this as any).items && (this as any).items.length > 0) {
+    (this as any).items.forEach((item: any) => {
       if (item.price && item.quantity) {
         item.totalPrice = item.price * item.quantity;
       }
@@ -162,7 +162,7 @@ cartSchema.pre('save', function(next) {
     // Set expiry to 30 days from now
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 30);
-    this.expiresAt = expiryDate;
+    (this as any).expiresAt = expiryDate;
   }
   next();
 });
@@ -180,7 +180,7 @@ cartSchema.statics.findExpired = function() {
 // Method to add item to cart
 cartSchema.methods.addItem = function(productId: string, variantId: string, quantity: number, price: number) {
   // Check if item already exists
-  const existingItem = this.items.find(item => 
+  const existingItem = (this as any).items.find((item: any) => 
     item.productId.toString() === productId && 
     item.variantId?.toString() === variantId
   );
@@ -192,7 +192,7 @@ cartSchema.methods.addItem = function(productId: string, variantId: string, quan
     existingItem.addedAt = new Date();
   } else {
     // Add new item
-    this.items.push({
+    (this as any).items.push({
       productId,
       variantId,
       quantity,
@@ -215,7 +215,7 @@ cartSchema.methods.updateItemQuantity = function(itemId: string, quantity: numbe
     throw new Error('Quantity cannot exceed 99');
   }
 
-  const item = this.items.id(itemId);
+  const item = (this as any).items.id(itemId);
   if (!item) {
     throw new Error('Item not found in cart');
   }
@@ -229,40 +229,40 @@ cartSchema.methods.updateItemQuantity = function(itemId: string, quantity: numbe
 
 // Method to remove item from cart
 cartSchema.methods.removeItem = function(itemId: string) {
-  this.items = this.items.filter(item => item._id.toString() !== itemId);
+  (this as any).items = (this as any).items.filter((item: any) => item._id.toString() !== itemId);
   return this.save();
 };
 
 // Method to clear cart
 cartSchema.methods.clearCart = function() {
-  this.items = [];
-  this.subtotal = 0;
-  this.tax = 0;
-  this.shipping = 0;
-  this.discount = 0;
-  this.couponDiscount = 0;
-  this.total = 0;
-  this.couponCode = undefined;
+  (this as any).items = [];
+  (this as any).subtotal = 0;
+  (this as any).tax = 0;
+  (this as any).shipping = 0;
+  (this as any).discount = 0;
+  (this as any).couponDiscount = 0;
+  (this as any).total = 0;
+  (this as any).couponCode = undefined;
   
   return this.save();
 };
 
 // Method to apply coupon
 cartSchema.methods.applyCoupon = function(couponCode: string, discountAmount: number) {
-  if (discountAmount > this.subtotal) {
+  if (discountAmount > (this as any).subtotal) {
     throw new Error('Coupon discount cannot exceed subtotal');
   }
 
-  this.couponCode = couponCode;
-  this.couponDiscount = discountAmount;
+  (this as any).couponCode = couponCode;
+  (this as any).couponDiscount = discountAmount;
   
   return this.save();
 };
 
 // Method to remove coupon
 cartSchema.methods.removeCoupon = function() {
-  this.couponCode = undefined;
-  this.couponDiscount = 0;
+  (this as any).couponCode = undefined;
+  (this as any).couponDiscount = 0;
   
   return this.save();
 };
@@ -273,7 +273,7 @@ cartSchema.methods.calculateTax = function(taxRate: number) {
     throw new Error('Tax rate must be between 0 and 100');
   }
 
-  this.tax = (this.subtotal * taxRate) / 100;
+  (this as any).tax = ((this as any).subtotal * taxRate) / 100;
   return this.save();
 };
 
@@ -289,27 +289,27 @@ cartSchema.methods.calculateShipping = function(shippingMethod: string) {
   const baseCost = baseShippingCosts[shippingMethod as keyof typeof baseShippingCosts] || 100;
   
   // Add weight-based cost (₹10 per kg)
-  const totalWeight = this.items.reduce((sum, item) => {
+  const totalWeight = (this as any).items.reduce((sum: any, item: any) => {
     // This would need to be populated with actual product weight
     return sum + (item.quantity || 0);
   }, 0);
   
   const weightCost = totalWeight * 10;
   
-  this.shipping = baseCost + weightCost;
+  (this as any).shipping = baseCost + weightCost;
   return this.save();
 };
 
 // Method to check if cart is expired
 cartSchema.methods.isExpired = function() {
-  return new Date() > this.expiresAt;
+  return new Date() > (this as any).expiresAt;
 };
 
 // Method to extend expiry
 cartSchema.methods.extendExpiry = function(days: number = 30) {
   const newExpiry = new Date();
   newExpiry.setDate(newExpiry.getDate() + days);
-  this.expiresAt = newExpiry;
+  (this as any).expiresAt = newExpiry;
   return this.save();
 };
 
@@ -317,17 +317,17 @@ cartSchema.methods.extendExpiry = function(days: number = 30) {
 cartSchema.methods.getFormattedTotal = function() {
   const formatter = new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: this.currency
+    currency: (this as any).currency
   });
   
-  return formatter.format(this.total);
+  return formatter.format((this as any).total);
 };
 
 // Method to validate cart items
 cartSchema.methods.validateItems = function() {
   const errors: string[] = [];
   
-  for (const item of this.items) {
+  for (const item of (this as any).items) {
     if (item.quantity <= 0) {
       errors.push(`Invalid quantity for item ${item.productId}`);
     }
@@ -342,6 +342,11 @@ cartSchema.methods.validateItems = function() {
   }
   
   return errors;
+};
+
+// Static method to find cart by user ID
+cartSchema.statics.findByUserId = function(userId: string) {
+  return this.findOne({ userId });
 };
 
 export const Cart = mongoose.model<ICart>('Cart', cartSchema);

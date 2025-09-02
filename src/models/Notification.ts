@@ -117,7 +117,7 @@ notificationSchema.methods.markAsRead = async function(this: INotification): Pro
 
 notificationSchema.methods.markAsUnread = async function(this: INotification): Promise<void> {
   this.isRead = false;
-  this.readAt = undefined;
+  delete (this as any).readAt;
   await this.save();
 };
 

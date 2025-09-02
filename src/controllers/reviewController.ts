@@ -24,7 +24,7 @@ export const getProductReviews = async (req: Request, res: Response) => {
     verified: verified === 'true'
   };
 
-  const reviews = await Review.findByProduct(productId, options);
+  const reviews = await (Review as any).findByProduct(productId, options);
 
   res.json({
     success: true,
@@ -87,7 +87,7 @@ export const createReview = async (req: Request, res: Response) => {
     const order = await Order.findOne({ 
       _id: orderId, 
       userId,
-      status: 'delivered'
+      orderStatus: 'delivered'
     });
     
     if (order) {
@@ -117,7 +117,7 @@ export const createReview = async (req: Request, res: Response) => {
   await review.save();
 
   // Update product ratings
-  await product.updateRatings();
+  await (product as any).updateRatings();
 
   logger.info('Review created', { 
     reviewId: review._id, 
@@ -164,7 +164,7 @@ export const updateReview = async (req: Request, res: Response) => {
   // Update product ratings
   const product = await Product.findById(review.productId);
   if (product) {
-    await product.updateRatings();
+    await (product as any).updateRatings();
   }
 
   logger.info('Review updated', { reviewId: id, userId });
@@ -192,7 +192,7 @@ export const deleteReview = async (req: Request, res: Response) => {
   // Update product ratings
   const product = await Product.findById(productId);
   if (product) {
-    await product.updateRatings();
+    await (product as any).updateRatings();
   }
 
   logger.info('Review deleted', { reviewId: id, userId });
@@ -312,7 +312,7 @@ export const approveReview = async (req: Request, res: Response) => {
   // Update product ratings
   const product = await Product.findById(review.productId);
   if (product) {
-    await product.updateRatings();
+    await (product as any).updateRatings();
   }
 
   logger.info('Review approved', { reviewId: id, approvedBy: (req as any).user.id });
@@ -337,7 +337,7 @@ export const rejectReview = async (req: Request, res: Response) => {
   // Update product ratings
   const product = await Product.findById(review.productId);
   if (product) {
-    await product.updateRatings();
+    await (product as any).updateRatings();
   }
 
   logger.info('Review rejected', { reviewId: id, rejectedBy: (req as any).user.id });
@@ -358,7 +358,7 @@ export const getProductReviewStats = async (req: Request, res: Response) => {
     throw createNotFoundError('Product not found');
   }
 
-  const stats = await Review.getProductStats(productId);
+  const stats = await (Review as any).getProductStats(productId);
 
   res.json({
     success: true,

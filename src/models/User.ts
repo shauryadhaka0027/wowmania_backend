@@ -201,6 +201,10 @@ const userSchema = new Schema<IUser>({
   },
   lockUntil: {
     type: Date
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -245,7 +249,10 @@ userSchema.pre('save', function(next) {
     if (defaultAddresses.length > 1) {
       // If multiple default addresses, keep only the first one
       for (let i = 1; i < defaultAddresses.length; i++) {
-        defaultAddresses[i].isDefault = false;
+        const addr = defaultAddresses[i];
+        if (addr) {
+          addr.isDefault = false;
+        }
       }
     }
   }
@@ -304,10 +311,10 @@ userSchema.methods.incLoginAttempts = function() {
     });
   }
   
-  const updates = { $inc: { loginAttempts: 1 } };
+  const updates: any = { $inc: { loginAttempts: 1 } };
   
   // Lock account after 5 failed attempts
-  if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
+  if (this.loginAttempts + 1 >= 5 && !(this as any).isLocked) {
     updates.$set = { lockUntil: new Date(Date.now() + 2 * 60 * 60 * 1000) }; // 2 hours
   }
   
@@ -325,7 +332,7 @@ userSchema.methods.resetLoginAttempts = function() {
 userSchema.methods.addAddress = function(address: IAddress) {
   if (address.isDefault) {
     // Remove default from other addresses
-    this.addresses.forEach(addr => addr.isDefault = false);
+    this.addresses.forEach((addr: any) => addr.isDefault = false);
   }
   this.addresses.push(address);
   return this.save();
@@ -340,7 +347,7 @@ userSchema.methods.updateAddress = function(addressId: string, updates: Partial<
   
   if (updates.isDefault) {
     // Remove default from other addresses
-    this.addresses.forEach(addr => addr.isDefault = false);
+    this.addresses.forEach((addr: any) => addr.isDefault = false);
   }
   
   Object.assign(address, updates);
@@ -349,13 +356,13 @@ userSchema.methods.updateAddress = function(addressId: string, updates: Partial<
 
 // Method to remove address
 userSchema.methods.removeAddress = function(addressId: string) {
-  this.addresses = this.addresses.filter(addr => addr._id.toString() !== addressId);
+  this.addresses = this.addresses.filter((addr: any) => addr._id.toString() !== addressId);
   return this.save();
 };
 
 // Method to set default address
 userSchema.methods.setDefaultAddress = function(addressId: string) {
-  this.addresses.forEach(addr => addr.isDefault = addr._id.toString() === addressId);
+  this.addresses.forEach((addr: any) => addr.isDefault = addr._id.toString() === addressId);
   return this.save();
 };
 

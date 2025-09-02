@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { body, param, query } from 'express-validator';
 import { asyncHandler } from '../middleware/errorHandler';
 import { requireRole } from '../middleware/auth';
-import { validate, commonValidations } from '../middleware/validation';
+import { validate, commonValidations, validateRequest } from '../middleware/validation';
 import { User } from '../models/User';
 import { Product } from '../models/Product';
 import { Order } from '../models/Order';
@@ -16,7 +16,7 @@ const router = Router();
 
 // Dashboard Statistics
 // GET /api/v1/admin/dashboard - Get dashboard statistics
-router.get('/dashboard', requireRole('admin'), asyncHandler(async (req, res) => {
+router.get('/dashboard', requireRole('admin'), asyncHandler(async (req: Request, res: Response) => {
   const [
     totalUsers,
     totalProducts,
@@ -103,7 +103,14 @@ router.get('/dashboard', requireRole('admin'), asyncHandler(async (req, res) => 
 
 // User Management
 // GET /api/v1/admin/users - Get all users with filtering
-router.get('/users', requireRole('admin'), commonValidations, validate, asyncHandler(async (req, res) => {
+router.get('/users', requireRole('admin'),
+  validateRequest([
+    ...commonValidations.pagination,
+    ...commonValidations.searchQuery,
+    ...commonValidations.sort
+  ]),
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
   const {
     page = 1,
     limit = 20,
@@ -163,7 +170,7 @@ router.get('/users', requireRole('admin'), commonValidations, validate, asyncHan
 router.put('/users/:id/status', requireRole('admin'), [
   param('id').isMongoId().withMessage('Valid user ID is required'),
   body('isActive').isBoolean().withMessage('isActive must be a boolean')
-], validate, asyncHandler(async (req, res) => {
+], validate, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { isActive } = req.body;
 
@@ -190,7 +197,7 @@ router.put('/users/:id/status', requireRole('admin'), [
 router.put('/users/:id/role', requireRole('admin'), [
   param('id').isMongoId().withMessage('Valid user ID is required'),
   body('role').isIn(['customer', 'admin', 'super_admin']).withMessage('Invalid role')
-], validate, asyncHandler(async (req, res) => {
+], validate, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { role } = req.body;
 
@@ -215,7 +222,7 @@ router.put('/users/:id/role', requireRole('admin'), [
 
 // Inventory Management
 // GET /api/v1/admin/inventory - Get inventory overview
-router.get('/inventory', requireRole('admin'), asyncHandler(async (req, res) => {
+router.get('/inventory', requireRole('admin'), asyncHandler(async (req: Request, res: Response) => {
   const [
     totalProducts,
     lowStockProducts,
@@ -263,7 +270,7 @@ router.post('/inventory/bulk-update', requireRole('admin'), [
   body('updates').isArray().withMessage('Updates must be an array'),
   body('updates.*.productId').isMongoId().withMessage('Valid product ID is required'),
   body('updates.*.stockQuantity').isInt({ min: 0 }).withMessage('Stock quantity must be a non-negative integer')
-], validate, asyncHandler(async (req, res) => {
+], validate, asyncHandler(async (req: Request, res: Response) => {
   const { updates } = req.body;
 
   const bulkOps = updates.map((update: any) => ({
@@ -290,7 +297,7 @@ router.get('/analytics/sales', requireRole('admin'), [
   query('period').optional().isIn(['daily', 'weekly', 'monthly', 'yearly']).withMessage('Invalid period'),
   query('startDate').optional().isISO8601().withMessage('Start date must be a valid date'),
   query('endDate').optional().isISO8601().withMessage('End date must be a valid date')
-], validate, asyncHandler(async (req, res) => {
+], validate, asyncHandler(async (req: Request, res: Response) => {
   const { period = 'monthly', startDate, endDate } = req.query;
 
   let dateFilter: any = {};
@@ -332,7 +339,7 @@ router.get('/analytics/sales', requireRole('admin'), [
 }));
 
 // GET /api/v1/admin/analytics/products - Get product analytics
-router.get('/analytics/products', requireRole('admin'), asyncHandler(async (req, res) => {
+router.get('/analytics/products', requireRole('admin'), asyncHandler(async (req: Request, res: Response) => {
   const [
     topSellingProducts,
     topRatedProducts,
@@ -390,7 +397,7 @@ router.get('/analytics/products', requireRole('admin'), asyncHandler(async (req,
 
 // System Management
 // GET /api/v1/admin/system/health - Get system health status
-router.get('/system/health', requireRole('admin'), asyncHandler(async (req, res) => {
+router.get('/system/health', requireRole('admin'), asyncHandler(async (req: Request, res: Response) => {
   const [
     dbStatus,
     redisStatus,
@@ -428,7 +435,7 @@ router.get('/system/health', requireRole('admin'), asyncHandler(async (req, res)
 router.post('/system/maintenance', requireRole('admin'), [
   body('enabled').isBoolean().withMessage('enabled must be a boolean'),
   body('message').optional().trim().isLength({ max: 500 }).withMessage('Message cannot exceed 500 characters')
-], validate, asyncHandler(async (req, res) => {
+], validate, asyncHandler(async (req: Request, res: Response) => {
   const { enabled, message } = req.body;
 
   // TODO: Implement maintenance mode logic
@@ -444,7 +451,16 @@ router.post('/system/maintenance', requireRole('admin'), [
 
 // Content Management
 // GET /api/v1/admin/content/reviews - Get pending reviews
-router.get('/content/reviews', requireRole('admin'), commonValidations, validate, asyncHandler(async (req, res) => {
+router.get(
+  '/content/reviews',
+  requireRole('admin'),
+  validateRequest([
+    ...commonValidations.pagination,
+    ...commonValidations.searchQuery,
+    ...commonValidations.sort
+  ]),
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
   const { page = 1, limit = 20 } = req.query;
 
   const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -481,7 +497,7 @@ router.get('/content/reviews', requireRole('admin'), commonValidations, validate
 // POST /api/v1/admin/content/reviews/:id/approve - Approve review
 router.post('/content/reviews/:id/approve', requireRole('admin'), [
   param('id').isMongoId().withMessage('Valid review ID is required')
-], validate, asyncHandler(async (req, res) => {
+], validate, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const review = await Review.findById(id);
@@ -494,7 +510,7 @@ router.post('/content/reviews/:id/approve', requireRole('admin'), [
   // Update product ratings
   const product = await Product.findById(review.productId);
   if (product) {
-    await product.updateRatings();
+    await product.updateRatings(review.rating);
   }
 
   logger.info(`Review approved: ${review._id} by admin: ${(req as any).user.id}`);
@@ -509,7 +525,7 @@ router.post('/content/reviews/:id/approve', requireRole('admin'), [
 router.post('/content/reviews/:id/reject', requireRole('admin'), [
   param('id').isMongoId().withMessage('Valid review ID is required'),
   body('reason').optional().trim().isLength({ max: 500 }).withMessage('Reason cannot exceed 500 characters')
-], validate, asyncHandler(async (req, res) => {
+], validate, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { reason } = req.body;
 
@@ -534,7 +550,7 @@ router.get('/reports/sales', requireRole('admin'), [
   query('startDate').isISO8601().withMessage('Start date is required'),
   query('endDate').isISO8601().withMessage('End date is required'),
   query('format').optional().isIn(['json', 'csv', 'pdf']).withMessage('Invalid format')
-], validate, asyncHandler(async (req, res) => {
+], validate, asyncHandler(async (req: Request, res: Response) => {
   const { startDate, endDate, format = 'json' } = req.query;
 
   const salesReport = await Order.aggregate([

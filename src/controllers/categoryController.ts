@@ -19,7 +19,7 @@ export const getAllCategories = async (req: Request, res: Response) => {
       .sort({ sortOrder: 1, name: 1 })
       .lean();
 
-    const treeData = Category.buildTree(categories);
+    const treeData = (Category as any).buildTree(categories);
 
     res.json({
       success: true,

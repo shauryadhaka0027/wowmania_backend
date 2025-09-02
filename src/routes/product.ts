@@ -44,7 +44,8 @@ const searchValidation = [
   query('isFeatured').optional().isBoolean().withMessage('isFeatured must be a boolean'),
   query('sortBy').optional().isIn(['name', 'price', 'createdAt', 'rating', 'popularity']).withMessage('Invalid sort field'),
   query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('Sort order must be asc or desc'),
-  ...commonValidations
+  ...commonValidations.pagination,
+  ...commonValidations.sort
 ];
 
 // GET /api/v1/products - Get all products with pagination and filtering

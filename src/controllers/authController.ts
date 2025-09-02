@@ -33,7 +33,10 @@ export const register = async (req: Request, res: Response) => {
 
   // Store refresh token in Redis
   const redis = getRedisClient();
-  await redis.setex(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken); // 7 days
+
+  if (redis) {
+    await redis.setEx(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken); // 7 days
+  }
 
   logger.info('User registered successfully', { userId: user._id, email });
 
@@ -64,19 +67,19 @@ export const login = async (req: Request, res: Response) => {
   }
 
   // Check if account is locked
-  if (user.isLocked) {
+  if ((user as any).isLocked) {
     throw createUnauthorizedError('Account is locked. Please contact support.');
   }
 
   // Verify password
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
-    await user.incLoginAttempts();
+    await (user as any).incLoginAttempts();
     throw createUnauthorizedError('Invalid credentials');
   }
 
   // Reset login attempts on successful login
-  await user.resetLoginAttempts();
+  await (user as any).resetLoginAttempts();
 
   // Generate tokens
   const accessToken = user.generateAuthToken();
@@ -84,7 +87,9 @@ export const login = async (req: Request, res: Response) => {
 
   // Store refresh token in Redis
   const redis = getRedisClient();
-  await redis.setex(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken);
+  if (redis) {
+    await redis.setEx(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken);
+  }
 
   logger.info('User logged in successfully', { userId: user._id, email });
 
@@ -119,6 +124,9 @@ export const refreshToken = async (req: Request, res: Response) => {
 
     // Check if refresh token exists in Redis
     const redis = getRedisClient();
+    if (!redis) {
+      throw createUnauthorizedError('Service temporarily unavailable');
+    }
     const storedToken = await redis.get(`refresh_token:${userId}`);
     
     if (!storedToken || storedToken !== refreshToken) {
@@ -136,7 +144,7 @@ export const refreshToken = async (req: Request, res: Response) => {
     const newRefreshToken = user.generateRefreshToken();
 
     // Update refresh token in Redis
-    await redis.setex(`refresh_token:${userId}`, 7 * 24 * 60 * 60, newRefreshToken);
+    await redis.setEx(`refresh_token:${userId}`, 7 * 24 * 60 * 60, newRefreshToken);
 
     res.json({
       success: true,
@@ -159,7 +167,9 @@ export const logout = async (req: Request, res: Response) => {
 
   // Remove refresh token from Redis
   const redis = getRedisClient();
-  await redis.del(`refresh_token:${userId}`);
+  if (redis) {
+    await redis.del(`refresh_token:${userId}`);
+  }
 
   logger.info('User logged out', { userId });
 
@@ -184,18 +194,20 @@ export const forgotPassword = async (req: Request, res: Response) => {
   // Generate reset token
   const resetToken = jwt.sign(
     { userId: user._id },
-    config.jwt.resetSecret,
+    config.jwt.secret,
     { expiresIn: '1h' }
   );
 
   // Store reset token in Redis
   const redis = getRedisClient();
-  await redis.setex(`reset_token:${user._id}`, 3600, resetToken); // 1 hour
+  if (redis) {
+    await redis.setEx(`reset_token:${user._id}`, 3600, resetToken); // 1 hour
+  }
 
   // TODO: Send email with reset link
   logger.info('Password reset requested', { userId: user._id, email });
 
-  res.json({
+  return res.json({
     success: true,
     message: 'If an account with that email exists, a password reset link has been sent'
   });
@@ -206,11 +218,14 @@ export const resetPassword = async (req: Request, res: Response) => {
 
   try {
     // Verify reset token
-    const decoded = jwt.verify(token, config.jwt.resetSecret) as any;
+    const decoded = jwt.verify(token, config.jwt.secret) as any;
     const userId = decoded.userId;
 
     // Check if reset token exists in Redis
     const redis = getRedisClient();
+    if (!redis) {
+      throw createUnauthorizedError('Service temporarily unavailable');
+    }
     const storedToken = await redis.get(`reset_token:${userId}`);
     
     if (!storedToken || storedToken !== token) {
@@ -231,7 +246,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     logger.info('Password reset successfully', { userId });
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Password reset successfully'
     });
@@ -251,7 +266,7 @@ export const getMe = async (req: Request, res: Response) => {
     throw createNotFoundError('User not found');
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: { user },
     message: 'User profile retrieved successfully'
@@ -261,9 +276,16 @@ export const getMe = async (req: Request, res: Response) => {
 export const verifyEmail = async (req: Request, res: Response) => {
   const { token } = req.params;
 
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      message: 'Verification token is required'
+    });
+  }
+
   try {
     // Verify email verification token
-    const decoded = jwt.verify(token, config.jwt.emailSecret) as any;
+    const decoded = jwt.verify(token, config.jwt.secret) as any;
     const userId = decoded.userId;
 
     const user = await User.findById(userId);
@@ -283,7 +305,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     logger.info('Email verified successfully', { userId });
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Email verified successfully'
     });

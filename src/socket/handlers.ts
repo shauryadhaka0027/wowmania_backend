@@ -47,7 +47,11 @@ const authenticateSocket = async (socket: AuthenticatedSocket, next: Function) =
     
     next();
   } catch (error) {
-    logger.error('Socket authentication failed:', { error: error.message });
+    if (error instanceof Error) {
+      logger.error('Socket authentication failed:', { error: error.message });
+    } else {
+      logger.error('Socket authentication failed:', { error });
+    }
     next(new Error('Authentication failed'));
   }
 };
@@ -221,8 +225,12 @@ export const setupSocketHandlers = (io: Server) => {
         userInfo.lastSeen = new Date();
       }
 
-      // Leave all rooms
-      socket.leaveAll();
+      // Leave all joined rooms except the default personal room (socket.id)
+      for (const room of socket.rooms) {
+        if (room !== socket.id) {
+          socket.leave(room);
+        }
+      }
     });
 
     // Handle errors

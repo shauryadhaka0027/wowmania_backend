@@ -7,7 +7,7 @@ import { logger } from '../config/logger';
 export const getCart = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  let cart = await Cart.findByUserId(userId);
+  let cart = await Cart.findOne({ userId }) as any;
   
   if (!cart) {
     // Create new cart if doesn't exist
@@ -37,7 +37,7 @@ export const addToCart = async (req: Request, res: Response) => {
 
   // Check if variant exists if provided
   if (variantId) {
-    const variant = product.variants.find(v => v._id.toString() === variantId);
+    const variant = product.variants.find(v => v._id && v._id.toString() === variantId);
     if (!variant) {
       throw createNotFoundError('Product variant not found');
     }
@@ -54,7 +54,7 @@ export const addToCart = async (req: Request, res: Response) => {
     }
   }
 
-  let cart = await Cart.findByUserId(userId);
+  let cart = await Cart.findOne({ userId }) as any;
   if (!cart) {
     cart = new Cart({ userId });
   }
@@ -78,12 +78,12 @@ export const updateCartItem = async (req: Request, res: Response) => {
     throw createValidationError('Quantity must be greater than 0');
   }
 
-  const cart = await Cart.findByUserId(userId);
+  const cart = await Cart.findOne({ userId }) as any;
   if (!cart) {
     throw createNotFoundError('Cart not found');
   }
 
-  const cartItem = cart.items.find(item => item._id.toString() === itemId);
+  const cartItem = cart.items.find((item: any) => item._id && item._id.toString() === itemId);
   if (!cartItem) {
     throw createNotFoundError('Cart item not found');
   }
@@ -95,7 +95,7 @@ export const updateCartItem = async (req: Request, res: Response) => {
   }
 
   if (cartItem.variantId) {
-    const variant = product.variants.find(v => v._id.toString() === cartItem.variantId.toString());
+    const variant = product.variants.find(v => v._id && v._id.toString() === cartItem.variantId.toString());
     if (!variant || variant.inventory.quantity < quantity) {
       throw createValidationError('Insufficient stock for this variant');
     }
@@ -120,7 +120,7 @@ export const removeFromCart = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { itemId } = req.params;
 
-  const cart = await Cart.findByUserId(userId);
+  const cart = await Cart.findOne({ userId }) as any;
   if (!cart) {
     throw createNotFoundError('Cart not found');
   }
@@ -138,7 +138,7 @@ export const removeFromCart = async (req: Request, res: Response) => {
 export const clearCart = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  const cart = await Cart.findByUserId(userId);
+  const cart = await Cart.findOne({ userId }) as any;
   if (!cart) {
     throw createNotFoundError('Cart not found');
   }
@@ -156,7 +156,7 @@ export const applyCoupon = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { couponCode } = req.body;
 
-  const cart = await Cart.findByUserId(userId);
+  const cart = await Cart.findOne({ userId }) as any;
   if (!cart) {
     throw createNotFoundError('Cart not found');
   }
@@ -182,7 +182,7 @@ export const applyCoupon = async (req: Request, res: Response) => {
 export const removeCoupon = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  const cart = await Cart.findByUserId(userId);
+  const cart = await Cart.findOne({ userId }) as any;
   if (!cart) {
     throw createNotFoundError('Cart not found');
   }
@@ -200,7 +200,7 @@ export const removeCoupon = async (req: Request, res: Response) => {
 export const getCartSummary = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  const cart = await Cart.findByUserId(userId);
+  const cart = await Cart.findOne({ userId }) as any;
   if (!cart) {
     return res.json({
       success: true,
@@ -227,7 +227,7 @@ export const getCartSummary = async (req: Request, res: Response) => {
     itemCount: cart.itemCount
   };
 
-  res.json({
+  return res.json({
     success: true,
     data: { summary },
     message: 'Cart summary retrieved successfully'
@@ -237,7 +237,7 @@ export const getCartSummary = async (req: Request, res: Response) => {
 export const validateCart = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  const cart = await Cart.findByUserId(userId);
+  const cart = await Cart.findOne({ userId }) as any;
   if (!cart || cart.isEmpty) {
     throw createValidationError('Cart is empty');
   }
@@ -252,7 +252,7 @@ export const validateCart = async (req: Request, res: Response) => {
     });
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: { validationResults },
     message: 'Cart is valid'
@@ -267,7 +267,7 @@ export const mergeGuestCart = async (req: Request, res: Response) => {
     throw createValidationError('Guest items array is required');
   }
 
-  let cart = await Cart.findByUserId(userId);
+  let cart = await Cart.findOne({ userId }) as any;
   if (!cart) {
     cart = new Cart({ userId });
   }
@@ -277,7 +277,7 @@ export const mergeGuestCart = async (req: Request, res: Response) => {
     const { productId, variantId, quantity } = guestItem;
     
     // Check if item already exists in cart
-    const existingItem = cart.items.find(item => 
+    const existingItem = cart.items.find((item: any) => 
       item.productId.toString() === productId &&
       (!variantId || item.variantId?.toString() === variantId)
     );
@@ -293,7 +293,7 @@ export const mergeGuestCart = async (req: Request, res: Response) => {
 
   await cart.populate('items.productId', 'name price images brand');
 
-  res.json({
+  return res.json({
     success: true,
     data: { cart },
     message: 'Guest cart merged successfully'
@@ -303,7 +303,7 @@ export const mergeGuestCart = async (req: Request, res: Response) => {
 export const checkCartExpiry = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  const cart = await Cart.findByUserId(userId);
+  const cart = await Cart.findOne({ userId }) as any;
   if (!cart) {
     return res.json({
       success: true,
@@ -319,7 +319,7 @@ export const checkCartExpiry = async (req: Request, res: Response) => {
     await cart.clearCart();
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: { isExpired },
     message: 'Cart expiry checked successfully'
@@ -329,14 +329,14 @@ export const checkCartExpiry = async (req: Request, res: Response) => {
 export const extendCartExpiry = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  const cart = await Cart.findByUserId(userId);
+  const cart = await Cart.findOne({ userId }) as any;
   if (!cart) {
     throw createNotFoundError('Cart not found');
   }
 
   await cart.extendExpiry();
 
-  res.json({
+  return res.json({
     success: true,
     data: { cart },
     message: 'Cart expiry extended successfully'

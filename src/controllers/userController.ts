@@ -126,7 +126,8 @@ export const deleteUser = async (req: Request, res: Response) => {
 
   // Soft delete
   user.isActive = false;
-  user.deletedAt = new Date();
+  (user as any).deletedAt = new Date();
+  
   await user.save();
 
   logger.info('User soft deleted', { userId: id, deletedBy: (req as any).user.id });
@@ -146,7 +147,7 @@ export const addAddress = async (req: Request, res: Response) => {
     throw createNotFoundError('User not found');
   }
 
-  await user.addAddress(addressData);
+  await (user as any).addAddress(addressData);
 
   res.json({
     success: true,
@@ -160,12 +161,16 @@ export const updateAddress = async (req: Request, res: Response) => {
   const { addressId } = req.params;
   const addressData = req.body;
 
+  if (!addressId) {
+    throw createValidationError('Address ID is required');
+  }
+
   const user = await User.findById(userId);
   if (!user) {
     throw createNotFoundError('User not found');
   }
 
-  await user.updateAddress(addressId, addressData);
+  await (user as any).updateAddress(addressId, addressData);
 
   res.json({
     success: true,
@@ -177,6 +182,10 @@ export const updateAddress = async (req: Request, res: Response) => {
 export const removeAddress = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { addressId } = req.params;
+
+  if (!addressId) {
+    throw createValidationError('Address ID is required');
+  }
 
   const user = await User.findById(userId);
   if (!user) {
@@ -195,6 +204,10 @@ export const removeAddress = async (req: Request, res: Response) => {
 export const setDefaultAddress = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { addressId } = req.params;
+
+  if (!addressId) {
+    throw createValidationError('Address ID is required');
+  }
 
   const user = await User.findById(userId);
   if (!user) {

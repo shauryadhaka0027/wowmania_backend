@@ -9,7 +9,7 @@ export const getWishlist = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { page = 1, limit = 20 } = req.query;
 
-  let wishlist = await Wishlist.findByUserId(userId);
+  let wishlist = await Wishlist.findOne({ userId });
   
   if (!wishlist) {
     // Create new wishlist if doesn't exist
@@ -56,13 +56,13 @@ export const addToWishlist = async (req: Request, res: Response) => {
 
   // Check if variant exists if provided
   if (variantId) {
-    const variant = product.variants.find(v => v._id.toString() === variantId);
+    const variant = product.variants.find((v: any) => v && v._id && v._id.toString() === variantId);
     if (!variant) {
       throw createNotFoundError('Product variant not found');
     }
   }
 
-  let wishlist = await Wishlist.findByUserId(userId);
+  let wishlist = await Wishlist.findOne({ userId });
   if (!wishlist) {
     wishlist = new Wishlist({ userId });
   }
@@ -77,7 +77,8 @@ export const addToWishlist = async (req: Request, res: Response) => {
       message: 'Item added to wishlist successfully'
     });
   } catch (error) {
-    if (error.message === 'Item already exists in wishlist') {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === 'Item already exists in wishlist') {
       throw createValidationError('Item already exists in wishlist');
     }
     throw error;
@@ -88,12 +89,15 @@ export const removeFromWishlist = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { itemId } = req.params;
 
-  const wishlist = await Wishlist.findByUserId(userId);
+  const wishlist = await Wishlist.findOne({ userId });
   if (!wishlist) {
     throw createNotFoundError('Wishlist not found');
   }
 
-  await wishlist.removeItem(itemId);
+  if (!itemId) {
+    throw createValidationError('Item ID is required');
+  }
+  await wishlist.removeItem(itemId as string);
   await wishlist.populate('items.productId', 'name price images brand');
 
   res.json({
@@ -108,12 +112,15 @@ export const updateWishlistItem = async (req: Request, res: Response) => {
   const { itemId } = req.params;
   const { notes } = req.body;
 
-  const wishlist = await Wishlist.findByUserId(userId);
+  const wishlist = await Wishlist.findOne({ userId });
   if (!wishlist) {
     throw createNotFoundError('Wishlist not found');
   }
 
-  await wishlist.updateItem(itemId, { notes });
+  if (!itemId) {
+    throw createValidationError('Item ID is required');
+  }
+  await wishlist.updateItem(itemId as string, { notes });
   await wishlist.populate('items.productId', 'name price images brand');
 
   res.json({
@@ -126,7 +133,7 @@ export const updateWishlistItem = async (req: Request, res: Response) => {
 export const clearWishlist = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  const wishlist = await Wishlist.findByUserId(userId);
+  const wishlist = await Wishlist.findOne({ userId });
   if (!wishlist) {
     throw createNotFoundError('Wishlist not found');
   }
@@ -145,12 +152,12 @@ export const moveToCart = async (req: Request, res: Response) => {
   const { itemId } = req.params;
   const { quantity = 1 } = req.body;
 
-  const wishlist = await Wishlist.findByUserId(userId);
+  const wishlist = await Wishlist.findOne({ userId });
   if (!wishlist) {
     throw createNotFoundError('Wishlist not found');
   }
 
-  const wishlistItem = wishlist.items.find(item => item._id.toString() === itemId);
+  const wishlistItem = wishlist.items.find((item: any) => item && item._id && item._id.toString() === itemId);
   if (!wishlistItem) {
     throw createNotFoundError('Wishlist item not found');
   }
@@ -163,31 +170,31 @@ export const moveToCart = async (req: Request, res: Response) => {
 
   // Check stock availability
   if (wishlistItem.variantId) {
-    const variant = product.variants.find(v => v._id.toString() === wishlistItem.variantId.toString());
+    const variant = product.variants.find((v: any) => v && v._id && wishlistItem.variantId && v._id.toString() === wishlistItem.variantId.toString());
     if (!variant || variant.inventory.quantity < quantity) {
       throw createValidationError('Insufficient stock for this variant');
     }
   } else {
-    const totalStock = product.variants.reduce((sum, variant) => sum + variant.inventory.quantity, 0);
+    const totalStock = product.variants.reduce((sum: number, variant: any) => sum + variant.inventory.quantity, 0);
     if (totalStock < quantity) {
       throw createValidationError('Insufficient stock for this product');
     }
   }
 
   // Add to cart
-  let cart = await Cart.findByUserId(userId);
+  let cart = await Cart.findOne({ userId });
   if (!cart) {
     cart = new Cart({ userId });
   }
 
-  await cart.addItem({
+  await (cart as any).addItem({
     productId: wishlistItem.productId,
     variantId: wishlistItem.variantId,
     quantity
   });
 
   // Remove from wishlist
-  await wishlist.removeItem(itemId);
+  await wishlist.removeItem(itemId as string);
 
   await cart.populate('items.productId', 'name price images brand');
   await wishlist.populate('items.productId', 'name price images brand');
@@ -202,8 +209,8 @@ export const moveToCart = async (req: Request, res: Response) => {
 export const getWishlistCount = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  const wishlist = await Wishlist.findByUserId(userId);
-  const count = wishlist ? wishlist.itemCount : 0;
+  const wishlist = await Wishlist.findOne({ userId });
+  const count = wishlist ? (wishlist as any).itemCount : 0;
 
   res.json({
     success: true,
@@ -217,7 +224,7 @@ export const checkInWishlist = async (req: Request, res: Response) => {
   const { productId } = req.params;
   const { variantId } = req.query;
 
-  const wishlist = await Wishlist.findByUserId(userId);
+  const wishlist = await Wishlist.findOne({ userId });
   if (!wishlist) {
     return res.json({
       success: true,
@@ -226,9 +233,9 @@ export const checkInWishlist = async (req: Request, res: Response) => {
     });
   }
 
-  const isInWishlist = wishlist.isItemInWishlist(productId, variantId as string);
+  const isInWishlist = (wishlist as any).isItemInWishlist(productId, variantId as string);
 
-  res.json({
+  return res.json({
     success: true,
     data: { isInWishlist },
     message: isInWishlist ? 'Product is in wishlist' : 'Product not in wishlist'
@@ -238,7 +245,7 @@ export const checkInWishlist = async (req: Request, res: Response) => {
 export const shareWishlist = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  const wishlist = await Wishlist.findByUserId(userId);
+  const wishlist = await Wishlist.findOne({ userId });
   if (!wishlist) {
     throw createNotFoundError('Wishlist not found');
   }
@@ -266,7 +273,7 @@ export const shareWishlist = async (req: Request, res: Response) => {
 export const getSharedWishlist = async (req: Request, res: Response) => {
   const { token } = req.params;
 
-  const wishlist = await Wishlist.findByShareToken(token);
+  const wishlist = await (Wishlist as any).findByShareToken(token);
   if (!wishlist) {
     throw createNotFoundError('Shared wishlist not found or expired');
   }
@@ -274,7 +281,7 @@ export const getSharedWishlist = async (req: Request, res: Response) => {
   await wishlist.populate('items.productId', 'name price images brand isActive');
 
   // Filter out inactive products
-  const activeItems = wishlist.items.filter(item => 
+  const activeItems = wishlist.items.filter((item: any) => 
     item.productId && (item.productId as any).isActive
   );
 

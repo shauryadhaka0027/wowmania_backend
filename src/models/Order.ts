@@ -3,12 +3,12 @@ import { IOrder, IOrderItem, IAddress } from '../types';
 
 const orderItemSchema = new Schema<IOrderItem>({
   productId: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId as any,
     ref: 'Product',
     required: true
   },
   variantId: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId as any,
     ref: 'Product.variants'
   },
   name: {
@@ -47,7 +47,7 @@ const orderSchema = new Schema<IOrder>({
     trim: true
   },
   userId: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId as any,
     ref: 'User',
     required: true
   },
@@ -137,46 +137,46 @@ const orderSchema = new Schema<IOrder>({
 // Virtual for order summary
 orderSchema.virtual('orderSummary').get(function() {
   return {
-    orderNumber: this.orderNumber,
-    totalItems: this.items.length,
-    totalQuantity: this.items.reduce((sum, item) => sum + item.quantity, 0),
-    subtotal: this.subtotal,
-    tax: this.tax,
-    shipping: this.shipping,
-    discount: this.discount,
-    total: this.total,
-    currency: this.currency
+    orderNumber: (this as any).orderNumber,
+    totalItems: (this as any).items.length,
+    totalQuantity: (this as any).items.reduce((sum: any, item: any) => sum + item.quantity, 0),
+    subtotal: (this as any).subtotal,
+    tax: (this as any).tax,
+    shipping: (this as any).shipping,
+    discount: (this as any).discount,
+    total: (this as any).total,
+    currency: (this as any).currency
   };
 });
 
 // Virtual for order status timeline
 orderSchema.virtual('statusTimeline').get(function() {
   const timeline = [
-    { status: 'pending', timestamp: this.createdAt, description: 'Order placed' }
+    { status: 'pending', timestamp: (this as any).createdAt, description: 'Order placed' }
   ];
 
-  if (this.orderStatus !== 'pending') {
-    timeline.push({ status: 'confirmed', timestamp: this.updatedAt, description: 'Order confirmed' });
+  if ((this as any).orderStatus !== 'pending') {
+    timeline.push({ status: 'confirmed', timestamp: (this as any).updatedAt, description: 'Order confirmed' });
   }
 
-  if (['processing', 'shipped', 'delivered'].includes(this.orderStatus)) {
-    timeline.push({ status: 'processing', timestamp: this.updatedAt, description: 'Order processing' });
+  if (['processing', 'shipped', 'delivered'].includes((this as any).orderStatus)) {
+    timeline.push({ status: 'processing', timestamp: (this as any).updatedAt, description: 'Order processing' });
   }
 
-  if (['shipped', 'delivered'].includes(this.orderStatus)) {
-    timeline.push({ status: 'shipped', timestamp: this.updatedAt, description: 'Order shipped' });
+  if (['shipped', 'delivered'].includes((this as any).orderStatus)) {
+    timeline.push({ status: 'shipped', timestamp: (this as any).updatedAt, description: 'Order shipped' });
   }
 
-  if (this.orderStatus === 'delivered') {
-    timeline.push({ status: 'delivered', timestamp: this.actualDelivery || this.updatedAt, description: 'Order delivered' });
+  if ((this as any).orderStatus === 'delivered') {
+    timeline.push({ status: 'delivered', timestamp: (this as any).actualDelivery || (this as any).updatedAt, description: 'Order delivered' });
   }
 
-  if (this.orderStatus === 'cancelled') {
-    timeline.push({ status: 'cancelled', timestamp: this.updatedAt, description: 'Order cancelled' });
+  if ((this as any).orderStatus === 'cancelled') {
+    timeline.push({ status: 'cancelled', timestamp: (this as any).updatedAt, description: 'Order cancelled' });
   }
 
-  if (this.orderStatus === 'returned') {
-    timeline.push({ status: 'returned', timestamp: this.updatedAt, description: 'Order returned' });
+  if ((this as any).orderStatus === 'returned') {
+    timeline.push({ status: 'returned', timestamp: (this as any).updatedAt, description: 'Order returned' });
   }
 
   return timeline;
@@ -184,10 +184,10 @@ orderSchema.virtual('statusTimeline').get(function() {
 
 // Virtual for is refundable
 orderSchema.virtual('isRefundable').get(function() {
-  if (this.orderStatus !== 'delivered') return false;
-  if (this.refundAmount) return false;
+  if ((this as any).orderStatus !== 'delivered') return false;
+  if ((this as any).refundAmount) return false;
   
-  const deliveryDate = this.actualDelivery || this.updatedAt;
+  const deliveryDate = (this as any).actualDelivery || (this as any).updatedAt;
   const daysSinceDelivery = (Date.now() - deliveryDate.getTime()) / (1000 * 60 * 60 * 24);
   
   return daysSinceDelivery <= 30; // 30 days return policy
@@ -204,10 +204,10 @@ orderSchema.index({ estimatedDelivery: 1 });
 
 // Pre-save middleware to generate order number
 orderSchema.pre('save', function(next) {
-  if (this.isNew && !this.orderNumber) {
+  if (this.isNew && !(this as any).orderNumber) {
     const timestamp = Date.now().toString().slice(-8);
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    this.orderNumber = `WM${timestamp}${random}`;
+    (this as any).orderNumber = `WM${timestamp}${random}`;
   }
   next();
 });
@@ -216,16 +216,16 @@ orderSchema.pre('save', function(next) {
 orderSchema.pre('save', function(next) {
   if (this.isModified('items') || this.isModified('subtotal') || this.isModified('tax') || this.isModified('shipping') || this.isModified('discount')) {
     // Recalculate subtotal from items if not provided
-    if (!this.subtotal && this.items && this.items.length > 0) {
-      this.subtotal = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
+    if (!(this as any).subtotal && (this as any).items && (this as any).items.length > 0) {
+      (this as any).subtotal = (this as any).items.reduce((sum: any, item: any) => sum + item.totalPrice, 0);
     }
     
     // Calculate total
-    this.total = (this.subtotal || 0) + (this.tax || 0) + (this.shipping || 0) - (this.discount || 0);
+    (this as any).total = ((this as any).subtotal || 0) + ((this as any).tax || 0) + ((this as any).shipping || 0) - ((this as any).discount || 0);
     
     // Ensure total is not negative
-    if (this.total < 0) {
-      this.total = 0;
+    if ((this as any).total < 0) {
+      (this as any).total = 0;
     }
   }
   next();
@@ -233,8 +233,8 @@ orderSchema.pre('save', function(next) {
 
 // Pre-save middleware to update item total prices
 orderSchema.pre('save', function(next) {
-  if (this.items && this.items.length > 0) {
-    this.items.forEach(item => {
+  if ((this as any).items && (this as any).items.length > 0) {
+    (this as any).items.forEach((item: any) => {
       if (item.price && item.quantity) {
         item.totalPrice = item.price * item.quantity;
       }
@@ -306,31 +306,31 @@ orderSchema.methods.updateStatus = function(newStatus: string, notes?: string) {
     returned: []
   };
 
-  const currentStatus = this.orderStatus;
+  const currentStatus = (this as any).orderStatus;
   const allowedTransitions = validTransitions[currentStatus] || [];
 
   if (!allowedTransitions.includes(newStatus)) {
     throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}`);
   }
 
-  this.orderStatus = newStatus;
+  (this as any).orderStatus = newStatus;
   
   if (notes) {
-    this.adminNotes = notes;
+    (this as any).adminNotes = notes;
   }
 
   // Set estimated delivery for processing orders
   if (newStatus === 'processing') {
-    const deliveryDays = this.shippingMethod === 'express' ? 2 : 
-                        this.shippingMethod === 'overnight' ? 1 : 
-                        this.shippingMethod === 'same_day' ? 0 : 5;
+    const deliveryDays = (this as any).shippingMethod === 'express' ? 2 : 
+                        (this as any).shippingMethod === 'overnight' ? 1 : 
+                        (this as any).shippingMethod === 'same_day' ? 0 : 5;
     
-    this.estimatedDelivery = new Date(Date.now() + deliveryDays * 24 * 60 * 60 * 1000);
+    (this as any).estimatedDelivery = new Date(Date.now() + deliveryDays * 24 * 60 * 60 * 1000);
   }
 
   // Set actual delivery for delivered orders
   if (newStatus === 'delivered') {
-    this.actualDelivery = new Date();
+    (this as any).actualDelivery = new Date();
   }
 
   return this.save();
@@ -346,40 +346,40 @@ orderSchema.methods.updatePaymentStatus = function(newStatus: string) {
     refunded: []
   };
 
-  const currentStatus = this.paymentStatus;
+  const currentStatus = (this as any).paymentStatus;
   const allowedTransitions = validPaymentTransitions[currentStatus] || [];
 
   if (!allowedTransitions.includes(newStatus)) {
     throw new Error(`Invalid payment status transition from ${currentStatus} to ${newStatus}`);
   }
 
-  this.paymentStatus = newStatus;
+  (this as any).paymentStatus = newStatus;
   return this.save();
 };
 
 // Method to add tracking information
 orderSchema.methods.addTracking = function(trackingNumber: string, estimatedDelivery?: Date) {
-  this.trackingNumber = trackingNumber;
+  (this as any).trackingNumber = trackingNumber;
   if (estimatedDelivery) {
-    this.estimatedDelivery = estimatedDelivery;
+    (this as any).estimatedDelivery = estimatedDelivery;
   }
   return this.save();
 };
 
 // Method to process refund
 orderSchema.methods.processRefund = function(amount: number, reason: string) {
-  if (amount > this.total) {
+  if (amount > (this as any).total) {
     throw new Error('Refund amount cannot exceed order total');
   }
 
-  if (this.refundAmount) {
+  if ((this as any).refundAmount) {
     throw new Error('Refund already processed for this order');
   }
 
-  this.refundAmount = amount;
-  this.refundReason = reason;
-  this.refundDate = new Date();
-  this.orderStatus = 'returned';
+  (this as any).refundAmount = amount;
+  (this as any).refundReason = reason;
+  (this as any).refundDate = new Date();
+  (this as any).orderStatus = 'returned';
 
   return this.save();
 };
@@ -393,17 +393,17 @@ orderSchema.methods.calculateShipping = function() {
     same_day: 800
   };
 
-  const baseCost = baseShippingCosts[this.shippingMethod as keyof typeof baseShippingCosts] || 100;
+  const baseCost = baseShippingCosts[(this as any).shippingMethod as keyof typeof baseShippingCosts] || 100;
   
   // Add weight-based cost (₹10 per kg)
-  const totalWeight = this.items.reduce((sum, item) => {
+  const totalWeight = (this as any).items.reduce((sum: any, item: any) => {
     // This would need to be populated with actual product weight
     return sum + (item.quantity || 0);
   }, 0);
   
   const weightCost = totalWeight * 10;
   
-  this.shipping = baseCost + weightCost;
+  (this as any).shipping = baseCost + weightCost;
   return this.save();
 };
 

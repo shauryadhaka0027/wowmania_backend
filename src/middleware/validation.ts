@@ -1,17 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
-import { validationResult, ValidationChain } from 'express-validator';
+import { validationResult, ValidationChain, query } from 'express-validator';
 import { createValidationError } from './errorHandler';
 import { logger } from '../config/logger';
 
 // Middleware to check validation results
 export const validate = (req: Request, res: Response, next: NextFunction) => {
+
   const errors = validationResult(req);
   
   if (!errors.isEmpty()) {
     const errorMessages = errors.array().map(error => ({
-      field: error.path,
+      field: error.type === 'field' ? error.path : 'unknown',
       message: error.msg,
-      value: error.value
+      value: error.type === 'field' ? error.value : undefined
     }));
 
     logger.warn('Validation failed:', {
@@ -24,7 +25,7 @@ export const validate = (req: Request, res: Response, next: NextFunction) => {
       params: req.params
     });
 
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: {
         message: 'Validation failed',
@@ -33,6 +34,7 @@ export const validate = (req: Request, res: Response, next: NextFunction) => {
       },
       timestamp: new Date().toISOString()
     });
+    return;
   }
 
   next();
@@ -68,62 +70,42 @@ export const commonValidations = {
   },
 
   // Pagination validation
-  pagination: {
-    page: {
-      in: ['query'],
-      optional: true,
-      isInt: {
-        options: { min: 1 },
-        errorMessage: 'Page must be a positive integer'
-      },
-      toInt: true
-    },
-    limit: {
-      in: ['query'],
-      optional: true,
-      isInt: {
-        options: { min: 1, max: 100 },
-        errorMessage: 'Limit must be between 1 and 100'
-      },
-      toInt: true
-    }
-  },
+  pagination: [
+    query('page')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Page must be a positive integer')
+      .toInt(),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Limit must be between 1 and 100')
+      .toInt()
+  ],
 
   // Search query validation
-  searchQuery: {
-    q: {
-      in: ['query'],
-      optional: true,
-      isString: {
-        errorMessage: 'Search query must be a string'
-      },
-      trim: true,
-      isLength: {
-        options: { min: 1, max: 100 },
-        errorMessage: 'Search query must be between 1 and 100 characters'
-      }
-    }
-  },
+  searchQuery: [
+    query('q')
+      .optional()
+      .isString()
+      .withMessage('Search query must be a string')
+      .trim()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Search query must be between 1 and 100 characters')
+  ],
 
   // Sort validation
-  sort: {
-    sort: {
-      in: ['query'],
-      optional: true,
-      isString: {
-        errorMessage: 'Sort field must be a string'
-      },
-      trim: true
-    },
-    order: {
-      in: ['query'],
-      optional: true,
-      isIn: {
-        options: [['asc', 'desc']],
-        errorMessage: 'Sort order must be either "asc" or "desc"'
-      }
-    }
-  }
+  sort: [
+    query('sort')
+      .optional()
+      .isString()
+      .withMessage('Sort field must be a string')
+      .trim(),
+    query('order')
+      .optional()
+      .isIn(['asc', 'desc'])
+      .withMessage('Sort order must be either "asc" or "desc"')
+  ]
 };
 
 // File upload validation

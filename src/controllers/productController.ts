@@ -221,7 +221,7 @@ export const updateProduct = async (req: Request, res: Response) => {
   if (images.length > 0) {
     const newImages = images.map(file => file.path);
     updateData.images = [...(product.images || []), ...newImages];
-    if (!product.primaryImage && newImages.length > 0) {
+    if (!(product as any).primaryImage && newImages.length > 0) {
       updateData.primaryImage = newImages[0];
     }
   }
@@ -248,7 +248,7 @@ export const deleteProduct = async (req: Request, res: Response) => {
 
   // Soft delete
   product.isActive = false;
-  product.deletedAt = new Date();
+  (product as any).deletedAt = new Date();
   await product.save();
 
   logger.info('Product deleted', { productId: id, deletedBy: (req as any).user.id });
@@ -268,7 +268,7 @@ export const addVariant = async (req: Request, res: Response) => {
     throw createNotFoundError('Product not found');
   }
 
-  await product.addVariant(variantData);
+  await (product as any).addVariant(variantData);
 
   res.json({
     success: true,
@@ -286,7 +286,7 @@ export const updateVariant = async (req: Request, res: Response) => {
     throw createNotFoundError('Product not found');
   }
 
-  await product.updateVariant(variantId, variantData);
+  await (product as any).updateVariant(variantId, variantData);
 
   res.json({
     success: true,
@@ -303,7 +303,7 @@ export const removeVariant = async (req: Request, res: Response) => {
     throw createNotFoundError('Product not found');
   }
 
-  await product.removeVariant(variantId);
+  await (product as any).removeVariant(variantId);
 
   res.json({
     success: true,
@@ -326,7 +326,7 @@ export const addImages = async (req: Request, res: Response) => {
   }
 
   const imagePaths = images.map(file => file.path);
-  await product.addImage(imagePaths);
+  await (product as any).addImage(imagePaths);
 
   res.json({
     success: true,
@@ -344,7 +344,7 @@ export const updateImage = async (req: Request, res: Response) => {
     throw createNotFoundError('Product not found');
   }
 
-  await product.updateImage(imageId, { url, alt, isPrimary });
+  await (product as any).updateImage(imageId, { url, alt, isPrimary });
 
   res.json({
     success: true,
@@ -361,7 +361,7 @@ export const removeImage = async (req: Request, res: Response) => {
     throw createNotFoundError('Product not found');
   }
 
-  await product.removeImage(imageId);
+  await (product as any).removeImage(imageId);
 
   res.json({
     success: true,
@@ -378,7 +378,7 @@ export const setPrimaryImage = async (req: Request, res: Response) => {
     throw createNotFoundError('Product not found');
   }
 
-  await product.setPrimaryImage(imageId);
+  await (product as any).setPrimaryImage(imageId);
 
   res.json({
     success: true,

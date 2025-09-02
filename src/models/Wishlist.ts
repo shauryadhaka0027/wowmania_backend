@@ -99,18 +99,21 @@ wishlistSchema.methods.addItem = async function(this: IWishlist, item: Partial<I
     throw new Error('Item already exists in wishlist');
   }
 
-  this.items.push({
+  const newItem: any = {
     productId: item.productId!,
-    variantId: item.variantId,
     notes: item.notes,
     addedAt: new Date()
-  });
+  };
+  if (item.variantId) {
+    newItem.variantId = item.variantId;
+  }
+  this.items.push(newItem);
 
   await this.save();
 };
 
 wishlistSchema.methods.removeItem = async function(this: IWishlist, itemId: string): Promise<void> {
-  const itemIndex = this.items.findIndex(item => item._id.toString() === itemId);
+  const itemIndex = this.items.findIndex((item: any) => item._id.toString() === itemId);
   
   if (itemIndex === -1) {
     throw new Error('Item not found in wishlist');
@@ -121,7 +124,7 @@ wishlistSchema.methods.removeItem = async function(this: IWishlist, itemId: stri
 };
 
 wishlistSchema.methods.updateItem = async function(this: IWishlist, itemId: string, updates: Partial<IWishlistItem>): Promise<void> {
-  const item = this.items.find(item => item._id.toString() === itemId);
+  const item: any = this.items.find((item: any) => item._id.toString() === itemId);
   
   if (!item) {
     throw new Error('Item not found in wishlist');
