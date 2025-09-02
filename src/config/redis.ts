@@ -17,7 +17,8 @@ export const connectRedis = async (): Promise<void> => {
       password: config.redis.password,
       socket: {
         connectTimeout: 10000,
-        lazyConnect: true,
+
+
         reconnectStrategy: (retries) => {
           if (retries > 10) {
             logger.error('Redis max reconnection attempts reached');
