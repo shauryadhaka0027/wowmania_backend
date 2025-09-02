@@ -11,21 +11,16 @@ export const connectDB = async (): Promise<void> => {
   }
 
   try {
+    console.log('config.mongodb.uri', config.mongodb.uri);
     const mongoUri = config.mongodb.uri;
     
     if (!mongoUri) {
       throw new Error('MongoDB URI is not defined');
     }
 
-    const options = {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      bufferMaxEntries: 0,
-      bufferCommands: false,
-    };
+   
 
-    await mongoose.connect(mongoUri, options);
+    await mongoose.connect(mongoUri);
 
     isConnected = true;
     logger.info('✅ MongoDB connected successfully');

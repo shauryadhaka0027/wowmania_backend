@@ -35,7 +35,7 @@ export const register = async (req: Request, res: Response) => {
   const redis = getRedisClient();
 
   if (redis) {
-    await redis.setEx(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken); // 7 days
+    await redis.setex(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken); // 7 days
   }
 
   logger.info('User registered successfully', { userId: user._id, email });
@@ -88,7 +88,7 @@ export const login = async (req: Request, res: Response) => {
   // Store refresh token in Redis
   const redis = getRedisClient();
   if (redis) {
-    await redis.setEx(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken);
+    await redis.setex(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken);
   }
 
   logger.info('User logged in successfully', { userId: user._id, email });
@@ -144,7 +144,7 @@ export const refreshToken = async (req: Request, res: Response) => {
     const newRefreshToken = user.generateRefreshToken();
 
     // Update refresh token in Redis
-    await redis.setEx(`refresh_token:${userId}`, 7 * 24 * 60 * 60, newRefreshToken);
+    await redis.setex(`refresh_token:${userId}`, 7 * 24 * 60 * 60, newRefreshToken);
 
     res.json({
       success: true,
@@ -201,7 +201,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
   // Store reset token in Redis
   const redis = getRedisClient();
   if (redis) {
-    await redis.setEx(`reset_token:${user._id}`, 3600, resetToken); // 1 hour
+    await redis.setex(`reset_token:${user._id}`, 3600, resetToken); // 1 hour
   }
 
   // TODO: Send email with reset link
