@@ -11,7 +11,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 
 import { connectDB } from './config/database';
-import { connectRedis } from './config/redis';
+// import { connectRedis } from './config/redis';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
@@ -48,7 +48,7 @@ const io = new Server(server, {
 
 // Connect to database and Redis
 connectDB();
-connectRedis();
+// connectRedis();
 
 // Security middleware
 app.use(helmet());

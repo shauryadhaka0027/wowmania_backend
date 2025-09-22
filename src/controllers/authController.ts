@@ -5,7 +5,7 @@ import { User } from '../models/User';
 import { createValidationError, createUnauthorizedError, createNotFoundError } from '../middleware/errorHandler';
 import { config } from '../config/env';
 import { logger } from '../config/logger';
-import { getRedisClient } from '../config/redis';
+// import { getRedisClient } from '../config/redis';
 
 export const register = async (req: Request, res: Response) => {
   const { email, password, firstName, lastName, phone } = req.body;
@@ -32,11 +32,11 @@ export const register = async (req: Request, res: Response) => {
   const refreshToken = user.generateRefreshToken();
 
   // Store refresh token in Redis
-  const redis = getRedisClient();
+  // const redis = getRedisClient();
 
-  if (redis) {
-    await redis.setex(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken); // 7 days
-  }
+  // if (redis) {
+  //   await redis.setex(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken); // 7 days
+  // }
 
   logger.info('User registered successfully', { userId: user._id, email });
 
@@ -86,10 +86,10 @@ export const login = async (req: Request, res: Response) => {
   const refreshToken = user.generateRefreshToken();
 
   // Store refresh token in Redis
-  const redis = getRedisClient();
-  if (redis) {
-    await redis.setex(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken);
-  }
+  // const redis = getRedisClient();
+  // if (redis) {
+  //   await redis.setex(`refresh_token:${user._id}`, 7 * 24 * 60 * 60, refreshToken);
+  // }
 
   logger.info('User logged in successfully', { userId: user._id, email });
 
@@ -123,15 +123,15 @@ export const refreshToken = async (req: Request, res: Response) => {
     const userId = decoded.userId;
 
     // Check if refresh token exists in Redis
-    const redis = getRedisClient();
-    if (!redis) {
-      throw createUnauthorizedError('Service temporarily unavailable');
-    }
-    const storedToken = await redis.get(`refresh_token:${userId}`);
+    // const redis = getRedisClient();
+    // if (!redis) {
+    //   throw createUnauthorizedError('Service temporarily unavailable');
+    // }
+    // const storedToken = await redis.get(`refresh_token:${userId}`);
     
-    if (!storedToken || storedToken !== refreshToken) {
-      throw createUnauthorizedError('Invalid refresh token');
-    }
+    // if (!storedToken || storedToken !== refreshToken) {
+    //   throw createUnauthorizedError('Invalid refresh token');
+    // }
 
     // Get user
     const user = await User.findById(userId);
@@ -144,7 +144,7 @@ export const refreshToken = async (req: Request, res: Response) => {
     const newRefreshToken = user.generateRefreshToken();
 
     // Update refresh token in Redis
-    await redis.setex(`refresh_token:${userId}`, 7 * 24 * 60 * 60, newRefreshToken);
+    // await redis.setex(`refresh_token:${userId}`, 7 * 24 * 60 * 60, newRefreshToken);
 
     res.json({
       success: true,
@@ -166,10 +166,10 @@ export const logout = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
   // Remove refresh token from Redis
-  const redis = getRedisClient();
-  if (redis) {
-    await redis.del(`refresh_token:${userId}`);
-  }
+  // const redis = getRedisClient();
+  // if (redis) {
+  //   await redis.del(`refresh_token:${userId}`);
+  // }
 
   logger.info('User logged out', { userId });
 
@@ -199,10 +199,10 @@ export const forgotPassword = async (req: Request, res: Response) => {
   );
 
   // Store reset token in Redis
-  const redis = getRedisClient();
-  if (redis) {
-    await redis.setex(`reset_token:${user._id}`, 3600, resetToken); // 1 hour
-  }
+  // const redis = getRedisClient();
+  // if (redis) {
+  //   await redis.setex(`reset_token:${user._id}`, 3600, resetToken); // 1 hour
+  // }
 
   // TODO: Send email with reset link
   logger.info('Password reset requested', { userId: user._id, email });
@@ -222,15 +222,15 @@ export const resetPassword = async (req: Request, res: Response) => {
     const userId = decoded.userId;
 
     // Check if reset token exists in Redis
-    const redis = getRedisClient();
-    if (!redis) {
-      throw createUnauthorizedError('Service temporarily unavailable');
-    }
-    const storedToken = await redis.get(`reset_token:${userId}`);
+    // const redis = getRedisClient();
+    // if (!redis) {
+    //   throw createUnauthorizedError('Service temporarily unavailable');
+    // }
+    // const storedToken = await redis.get(`reset_token:${userId}`);
     
-    if (!storedToken || storedToken !== token) {
-      throw createUnauthorizedError('Invalid or expired reset token');
-    }
+    // if (!storedToken || storedToken !== token) {
+    //   throw createUnauthorizedError('Invalid or expired reset token');
+    // }
 
     // Update password
     const user = await User.findById(userId);
@@ -242,7 +242,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     await user.save();
 
     // Remove reset token from Redis
-    await redis.del(`reset_token:${userId}`);
+    // await redis.del(`reset_token:${userId}`);
 
     logger.info('Password reset successfully', { userId });
 
